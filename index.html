@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jadual Kelapangan Penceramah PRN N9</title>
+  <!-- Tailwind CSS & Font Awesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="bg-[#0B1B3D] text-slate-100 font-sans min-h-screen pb-16 antialiased">
+
+  <!-- Header Banner -->
+  <header class="p-6 text-center border-b border-blue-900/60 bg-gradient-to-b from-[#0F234D] to-[#0B1B3D]">
+    <span class="inline-block bg-amber-400 text-blue-950 text-[10px] font-black uppercase px-3 py-1 rounded-full mb-3 tracking-widest shadow-sm">
+      Bilik Gerakan PRN Negeri Sembilan
+    </span>
+    <h1 class="text-xl md:text-2xl font-black tracking-tight text-white uppercase">
+      Jadual Kelapangan Penceramah
+    </h1>
+    <p class="text-xs text-blue-300 mt-1">
+      Rujukan penugasan DUN dan permohonan permit ceramah IPD / PDRM
+    </p>
+
+    <!-- Quick Links -->
+    <div class="mt-4 flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
+      <a href="https://docs.google.com/document/d/1myhdcVMsTva0V2IE6ZsrjYZhZWDLXk5nhy3dYrfXYak/edit?usp=sharing" target="_blank" class="flex-1 py-2.5 px-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+        <i class="fa-solid fa-file-lines text-amber-400"></i> Google Docs Rasmi
+      </a>
+      <a href="https://preemiyum.my.canva.site/penceramahprnn9" target="_blank" class="flex-1 py-2.5 px-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+        <i class="fa-solid fa-calendar-check text-emerald-400"></i> Laman Canva Asal
+      </a>
+    </div>
+  </header>
+
+  <div class="max-w-xl mx-auto px-4 mt-5 space-y-3">
+    <!-- Search Bar -->
+    <div class="relative">
+      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+      <input type="text" id="search" placeholder="Cari nama, No. KP, DUN tempat, atau jawatan..." 
+        class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 transition" />
+    </div>
+
+    <!-- Location Filter Pills -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs" id="filterPills">
+      <button onclick="setFilter('SEMUA')" class="filter-btn active-pill px-3 py-1 rounded-lg bg-amber-400 text-blue-950 font-bold transition">Semua</button>
+      <button onclick="setFilter('AMPANGAN')" class="filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">AMPANGAN</button>
+      <button onclick="setFilter('BAGAN PINANG')" class="filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">BAGAN PINANG</button>
+    </div>
+  </div>
+
+  <!-- Cards Container -->
+  <main id="scheduleContainer" class="max-w-xl mx-auto px-4 mt-4 space-y-3">
+    <div class="text-center py-10 text-xs text-blue-300">
+      <i class="fa-solid fa-spinner fa-spin text-base text-amber-400 mb-2"></i>
+      <p>Memuatkan jadual kelapangan...</p>
+    </div>
+  </main>
+
+  <script>
+    // Pautan CSV "Publish to web" dari Google Sheet (Tab Jadual Kelapangan)
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1gY.../pub?gid=...&single=true&output=csv";
+
+    // Data dari tangkap layar yang anda berikan
+    const defaultData = [
+      { bil: "1", nama: "Muhammad Farid", jawatan: "Naib Ketua Ulamak Kawasan Seremban", ic: "900925035701", tel: "0145701319", tempat: "AMPANGAN", tarikh: "2026-07-19 → 2026-07-19" },
+      { bil: "1", nama: "Najihatussalehah Ahmad", jawatan: "Ajk PAS PUSAT/ADUN BOTA/KPEN DMPM", ic: "661115085066", tel: "0195597066", tempat: "BAGAN PINANG", tarikh: "2026-07-19 → 2026-07-19" },
+      { bil: "2", nama: "Mohd Hasnizan Bin Harun", jawatan: "Ahli Parlimen Hulu Selangor / Timbalan Pesuruhjaya 3 Selangor", ic: "700605-08-5201", tel: "0196505201", tempat: "AMPANGAN", tarikh: "2026-07-27 → 2026-07-30" },
+      { bil: "3", nama: "Nor Najwa Hidayah binti Amir", jawatan: "Ketua Penerangan Dewan Muslimat Pas Wilayah Persekutuan", ic: "910405086424", tel: "0195424381", tempat: "BAGAN PINANG", tarikh: "2026-07-19 → 2026-07-19" }
+    ];
+
+    let currentList = [];
+    let currentFilter = "SEMUA";
+
+    function parseCSV(text) {
+      const lines = text.split("\n").filter(l => l.trim() !== "");
+      if (lines.length <= 1) return [];
+      return lines.slice(1).map(row => {
+        const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(",");
+        const clean = c => (c || "").replace(/^"|"$/g, '').trim();
+        return {
+          bil: clean(cols[0]),
+          nama: clean(cols[1]),
+          jawatan: clean(cols[2]),
+          ic: clean(cols[3]),
+          tel: clean(cols[4]),
+          tempat: clean(cols[5]),
+          tarikh: clean(cols[6])
+        };
+      });
+    }
+
+    async function init() {
+      try {
+        const res = await fetch(CSV_URL);
+        if (!res.ok) throw new Error("Gagal mengambil fail CSV");
+        const csv = await res.text();
+        const parsed = parseCSV(csv);
+        currentList = parsed.length > 0 ? parsed : defaultData;
+      } catch (e) {
+        currentList = defaultData;
+      }
+      applyFilters();
+    }
+
+    function copyPermitBlock(btn, item) {
+      const text = `NAMA: ${item.nama}\nNO. KAD PENGENALAN: ${item.ic}\nNO. TELEFON: ${item.tel}\nJAWATAN: ${item.jawatan}\nTEMPAT/DUN: ${item.tempat}\nTARIKH: ${item.tarikh}`;
+      navigator.clipboard.writeText(text);
+      const prev = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Disalin!`;
+      setTimeout(() => btn.innerHTML = prev, 1500);
+    }
+
+    function renderCards(items) {
+      const el = document.getElementById("scheduleContainer");
+      if (!items || items.length === 0) {
+        el.innerHTML = `<p class="text-center text-slate-400 text-xs py-10">Tiada rekod kelapangan penceramah dijumpai.</p>`;
+        return;
+      }
+      el.innerHTML = items.map(s => {
+        const cleanTel = s.tel.replace(/[^0-9]/g, '');
+        return `
+          <div class="bg-slate-800/90 border border-slate-700/90 rounded-2xl p-4 shadow-sm hover:border-slate-600 transition">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3 border-b border-slate-700/80 pb-3">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    ${s.tempat}
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-mono">Bil: ${s.bil}</span>
+                </div>
+                <h2 class="font-bold text-white text-sm">${s.nama}</h2>
+                <p class="text-amber-400 text-xs font-medium leading-relaxed">${s.jawatan}</p>
+              </div>
+              <button onclick='copyPermitBlock(this, ${JSON.stringify(s)})' class="shrink-0 bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-700 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                <i class="fa-regular fa-copy"></i> Salin
+              </button>
+            </div>
+
+            <!-- Details Body -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-3">
+              <div>
+                <span class="text-slate-400 text-[11px] block">No. Kad Pengenalan:</span>
+                <span class="font-mono text-white font-medium">${s.ic}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 text-[11px] block">No. Telefon:</span>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <a href="tel:${cleanTel}" class="text-amber-300 font-mono hover:underline">${s.tel}</a>
+                  <a href="https://wa.me/60${cleanTel.replace(/^0/, '')}" target="_blank" class="text-emerald-400 hover:text-emerald-300 text-xs">
+                    <i class="fa-brands fa-whatsapp"></i>
+                  </a>
+                </div>
+              </div>
+              <div class="sm:col-span-2 bg-slate-900/60 rounded-xl p-2.5 border border-slate-800 flex items-center justify-between">
+                <span class="text-slate-400 text-[11px]"><i class="fa-regular fa-calendar-days text-amber-400 mr-1.5"></i>Tarikh Bertugas:</span>
+                <span class="font-mono text-xs font-semibold text-emerald-300">${s.tarikh}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setFilter(loc) {
+      currentFilter = loc;
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        if (btn.textContent.trim().toUpperCase() === loc) {
+          btn.className = "filter-btn active-pill px-3 py-1 rounded-lg bg-amber-400 text-blue-950 font-bold transition";
+        } else {
+          btn.className = "filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition";
+        }
+      });
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const q = document.getElementById("search").value.toLowerCase().trim();
+      const filtered = currentList.filter(s => {
+        const matchLoc = (currentFilter === "SEMUA") || (s.tempat.toUpperCase() === currentFilter);
+        const matchQuery = !q || 
+          s.nama.toLowerCase().includes(q) || 
+          s.ic.includes(q) || 
+          s.tel.includes(q) || 
+          s.jawatan.toLowerCase().includes(q) || 
+          s.tempat.toLowerCase().includes(q);
+        return matchLoc && matchQuery;
+      });
+      renderCards(filtered);
+    }
+
+    document.getElementById("search").addEventListener("input", applyFilters);
+    init();
+  </script>
+</body>
+</html>
